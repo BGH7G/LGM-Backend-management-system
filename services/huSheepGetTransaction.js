@@ -1,0 +1,74 @@
+const {sequelize, HuSheep, HuSheepIndex, AgeMilestone, Location} = require("../model/experimentalData/huSheepModel");
+
+async function huSheepGetTransaction(sheepId) {
+    return await sequelize.transaction(async (t) => {
+        const sheep = await HuSheep.findByPk(sheepId, {
+            include: [
+                {
+                    model: Location,
+                    attributes: [
+                        'id', 'farm_name', 'address', 'region',
+                        'climate_info', 'coordinates', 'createdAt', 'updatedAt'
+                    ]
+                }
+            ],
+            transaction: t
+        });
+        const indexData = await HuSheepIndex.findAll({
+            where: {
+                HuSheepId: sheepId
+            },
+            include: [
+                {
+                    model: AgeMilestone,
+                    attributes: ['id', 'age_days', 'milestone_name', 'description']
+                }
+            ],
+            order: [
+                [{model: AgeMilestone, as: 'milestone'}, 'age_days', 'ASC']
+            ],
+            transaction: t
+        });
+        return {
+            sheep: {
+                id: sheep.id,
+                sheep_number: sheep.sheep_number,
+                birth_date: sheep.birth_date,
+                gender: sheep.gender,
+                pregnant: sheep.pregnant,
+                notes: sheep.notes,
+                createdAt: sheep.createdAt,
+                updatedAt: sheep.updatedAt
+            },
+            location: sheep.Location,
+            indexData: indexData.map(index => ({
+                id: index.id,
+                milestone: index.milestone,
+                notes: index.notes,
+                group: index.group,
+                rumen_ph: index.rumen_ph,
+                acetate: index.acetate,
+                propionate: index.propionate,
+                butyrate: index.butyrate,
+                total_vfas: index.total_vfas,
+                bw: index.bw,
+                weight_gain: index.weight_gain,
+                rumen_wet_weight: index.rumen_wet_weight,
+                rumen_dry_weight: index.rumen_dry_weight,
+                rumen_volume: index.rumen_volume,
+                rumen_relative_weight: index.rumen_relative_weight,
+                papilla_length: index.papilla_length,
+                papilla_width: index.papilla_width,
+                papilla_surface_area: index.papilla_surface_area,
+                papilla_count: index.papilla_count,
+                absorptive_surface_area: index.absorptive_surface_area,
+                createdAt: index.createdAt,
+                updatedAt: index.updatedAt
+            }))
+        };
+    })
+}
+
+module.exports = {
+    huSheepGetTransaction,
+}

@@ -1,0 +1,47 @@
+const { sequelize, Sample, Buyer, Tag } = require('../model/sampleModel');
+
+module.exports = async function sampleDeleteTransaction(req) {
+    return await sequelize.transaction(async (t) => {
+        const sampleId = req.params.id;
+        if (!sampleId) {
+            throw new Error('Sample ID is required');
+        }
+
+        const sample = await Sample.findByPk(sampleId, {
+            include: [Buyer, Tag],
+            transaction: t
+        });
+        if (!sample) {
+            throw new Error('No sample was found');
+        }
+
+        await sample.removeTags(sample.Tags, { transaction: t });
+
+        // 遍历解除关联的标签，检查是否还有其他样品关联
+        await Promise.all(sample.Tags.map(async (tag) => {
+            // 通过 tag.getSamples 获取该标签关联的样品
+            const samplesForTag = await tag.getSamples({ transaction: t });
+            if (samplesForTag.length === 0) {
+                // 如果没有其他样品关联，则删除该标签
+                await Tag.destroy({ where: { id: tag.id }, transaction: t });
+            }
+        }));
+
+        // 删除样品
+        await sample.destroy({ transaction: t });
+
+        // 检查样品所属的 Buyer 是否还有其他样品关联
+        if (sample.Buyer) {
+            const buyerSamplesCount = await Sample.count({
+                where: { BuyerId: sample.Buyer.id },
+                transaction: t
+            });
+            if (buyerSamplesCount === 0) {
+                await Buyer.destroy({
+                    where: { id: sample.Buyer.id },
+                    transaction: t
+                });
+            }
+        }
+    });
+};
