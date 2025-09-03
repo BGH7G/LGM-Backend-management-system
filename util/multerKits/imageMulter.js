@@ -1,7 +1,7 @@
-const imagesMulter = require('multer');
+const multer = require('multer');
 const path = require('path');
 
-const storage = imagesMulter.diskStorage({
+const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         cb(null, 'public/images')
     },
@@ -12,7 +12,7 @@ const storage = imagesMulter.diskStorage({
     }
 })
 
-// 前端可以处理上传文件的大小问题
-const imagesUpload = imagesMulter({storage: storage});
+// 创建 multer 实例
+const imagesUpload = multer({storage: storage});
 
 module.exports = imagesUpload;

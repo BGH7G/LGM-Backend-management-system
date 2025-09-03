@@ -10,11 +10,17 @@ const User = sequelize.define('User', {
         allowNull: false,
         unique: true,
         validate: {
-            len: [2,30],
+            len: [2, 30],
         }
     },
-    avatar:{
+    avatar: {
         type: DataTypes.TEXT,
+    },
+    role: {
+        type: DataTypes.ENUM,
+        allowNull: false,
+        values: ['admin', 'user'],
+        defaultValue: 'user'
     },
     password: {
         type: DataTypes.STRING,

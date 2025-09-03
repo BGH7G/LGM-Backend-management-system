@@ -3,8 +3,12 @@ const {
     ageMilestonePostTransaction,
     huSheepIndexPostTransaction
 } = require('../../services/huSheepPostTransaction');
+const { huSheepIndexImportTransaction } = require('../../services/huSheepIndexImportTransaction');
+const XLSX = require('xlsx');
 const {huSheepGetTransaction} = require('../../services/huSheepGetTransaction');
 const {huSheepGetAllTransaction} = require('../../services/huSheepGetAllTransaction');
+const {getLocationsOnly, getLatestIndexesOnly, getAgeMilestonesOnly} = require('../../services/huSheepSelectiveGetTransaction');
+const { huSheepIndexesFlatGetTransaction } = require('../../services/huSheepIndexesFlatGetTransaction');
 const {
     huSheepUpdateTransaction,
     huSheepIndexUpdateTransaction,
@@ -20,12 +24,13 @@ const {
 } = require('../../services/huSheepDeleteTransaction');
 
 exports.getAll = async (req, res) => {
+    console.log(req.query.page)
+    console.log(req.query.pageSize)
+    let page = parseInt(req.query.page) || 1;
+    let pageSize = parseInt(req.query.pageSize) || 10;
+    let sortBy = req.query.sortBy || 'id';
+    let sortOrder = (req.query.sortOrder || 'ASC').toUpperCase();
     try {
-        const page = parseInt(req.query.page) || 1;
-        const pageSize = parseInt(req.query.pageSize) || 10;
-        const sortBy = req.query.sortBy || 'id';
-        const sortOrder = (req.query.sortOrder || 'ASC').toUpperCase();
-
         if (page < 1 || pageSize < 1) {
             return res.status(400).json({
                 success: false,
@@ -87,6 +92,18 @@ exports.getAll = async (req, res) => {
     }
 }
 
+// 扁平化返回 HuSheepIndex 列表（按“羊”分页），每条记录附带 sheep_id、sheep_number 与 AgeMilestone
+exports.getSheepIndexesFlat = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const pageSize = parseInt(req.query.pageSize) || 10;
+        const result = await huSheepIndexesFlatGetTransaction({ page, pageSize });
+        return res.status(200).json({ success: true, msg: 'successfully!', ...result });
+    } catch (err) {
+        return res.status(500).json({ success: false, msg: 'Server error!', err });
+    }
+}
+
 exports.getSheep = async (req, res) => {
     try {
         const sheepId = req.params.id;
@@ -99,6 +116,7 @@ exports.getSheep = async (req, res) => {
 
 exports.sheepInfoPost = async (req, res) => {
     try {
+        console.log(req.body)
         await huSheepPostTransaction(req.body)
         res.status(201).json({msg: 'data update successfully!'});
     } catch (err) {
@@ -118,15 +136,55 @@ exports.ageInfoPost = async (req, res) => {
 exports.indexInfoPost = async (req, res) => {
     try {
         await huSheepIndexPostTransaction(req.body)
-        res.status(201).json({msg: 'ageMilestone update successfully!'});
+        res.status(201).json({msg: 'indexInfo update successfully!'});
     } catch (err) {
-        if (err.message === 'The Age milestone was not found') {
+        if (err.message === 'The indexInfo was not found') {
             res.status(404).json({
                 error: err.message
             });
         } else {
             res.status(500).json({msg: 'Server error!', err: err});
         }
+    }
+}
+
+// 批量导入 HuSheepIndex 指标（Excel/CSV）
+// 使用 file 字段上传文件，支持 ?dryRun=true 仅校验不入库
+exports.indexImport = async (req, res) => {
+    try {
+        const dryRun = (req.query.dryRun || req.query.dryrun) === 'true';
+        if (!req.file || !req.file.buffer) {
+            return res.status(400).json({ success: false, msg: 'No file uploaded. Please upload with field name "file".' });
+        }
+        const summary = await huSheepIndexImportTransaction(req.file.buffer, { dryRun });
+        return res.status(200).json({ success: true, dryRun, summary });
+    } catch (err) {
+        return res.status(500).json({ success: false, msg: 'Import failed', error: err.message || String(err) });
+    }
+}
+
+// 下载 HuSheepIndex 导入模板（xlsx）
+exports.indexTemplate = async (_req, res) => {
+    try {
+        const headers = [
+            'sheep_number', 'age_days', 'group', 'rumen_ph', 'acetate', 'propionate', 'isobutyrate', 'butyrate', 'isovalerate', 'valerate',
+            'total_vfas', 'bw', 'weight_gain', 'rumen_wet_weight', 'rumen_dry_weight', 'rumen_volume', 'rumen_relative_weight', 'rumen_volume_proportion',
+            'papilla_length', 'papilla_width', 'papilla_surface_area', 'papilla_count', 'absorptive_surface_area', 'dorsal_sac_thickness', 'ventral_sac_thickness', 'notes'
+        ];
+        const sample = [
+            'S001', 30, 'A', 6.5, 30, 15, 0.5, 8, 0.6, 1.2,
+            60, 25, 0.3, 1200, 300, 8.5, 2.5, 0.35,
+            2.1, 1.0, 2.1, 45, 12.5, 3.2, 2.9, 'optional notes']
+        ;
+        const ws = XLSX.utils.aoa_to_sheet([headers, sample]);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'HuSheepIndex');
+        const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename="hu_sheep_index_template.xlsx"');
+        return res.status(200).send(buffer);
+    } catch (err) {
+        return res.status(500).json({ success: false, msg: 'Template generation failed', error: err.message || String(err) });
     }
 }
 
@@ -392,6 +450,7 @@ exports.sheepDelete = async (req, res) => {
 }
 
 exports.batchSheepDelete = async (req, res) => {
+
     const sheepIdsInput = req.body.sheepId;
     if (!Array.isArray(sheepIdsInput)) {
         return res.status(400).json({success: false, msg: 'Invalid input: sheepIds must be an array.'});
@@ -461,7 +520,7 @@ exports.batchSheepDelete = async (req, res) => {
 
 exports.sheepIndexDelete = async (req, res) => {
     const indexId = parseInt(req.params.id);
-    try{
+    try {
 
         if (!indexId || isNaN(indexId)) {
             return res.status(400).json({
@@ -478,7 +537,7 @@ exports.sheepIndexDelete = async (req, res) => {
             data: result.deleteIndexInfo
         });
 
-    }catch (err){
+    } catch (err) {
         console.error(`[ERROR] Failed to delete sheep index with ID ${indexId || req.params.id}:`, err); // 记录详细错误日志
 
         if (err.message && err.message.includes("No sheepIndex was found")) {
@@ -501,7 +560,7 @@ exports.locationDelete = async (req, res) => {
     let locationID;
     let transferToLocationId = null;
     let force = false;
-    try{
+    try {
         locationID = parseInt(req.params.id);
         const transferParam = req.query.transferToLocationId;
         if (transferParam) {
@@ -523,14 +582,14 @@ exports.locationDelete = async (req, res) => {
             });
         }
 
-        const result = await deleteLocationDeleteTransaction(locationID, { force,transferToLocationId });
+        const result = await deleteLocationDeleteTransaction(locationID, {force, transferToLocationId});
 
         res.status(200).json({
             success: true,
             msg: result.message,
             data: result.deletedLocationInfo
         });
-    }catch (err){
+    } catch (err) {
         // 首先记录详细错误日志，包含相关参数
         console.error(`[ERROR] Failed operation for Location ID ${locationID} (TransferTo: ${transferToLocationId}, Force: ${force}):`, err);
         const errorMessage = err.message || ''; // 获取错误消息，处理可能没有 message 的情况
@@ -552,8 +611,7 @@ exports.locationDelete = async (req, res) => {
                 success: false,
                 msg: errorMessage
             });
-        }
-        else {
+        } else {
             return res.status(500).json({
                 success: false,
                 msg: 'An unexpected error occurred on the server while attempting to process the location deletion.'
@@ -566,7 +624,7 @@ exports.ageMilestoneDelete = async (req, res) => {
     let ageMilestoneId;
     let transferToAgeMilestoneId = null;
     let force = false;
-    try{
+    try {
         ageMilestoneId = parseInt(req.params.id);
         const transferParam = req.query.transferToAgeMilestoneId;
         if (transferParam) {
@@ -587,14 +645,14 @@ exports.ageMilestoneDelete = async (req, res) => {
             });
         }
 
-        const result = await deleteAgeMilestoneTransaction(ageMilestoneId, { force,transferToAgeMilestoneId });
+        const result = await deleteAgeMilestoneTransaction(ageMilestoneId, {force, transferToAgeMilestoneId});
 
         res.status(200).json({
             success: true,
             msg: `Successfully processed AgeMilestone ID ${ageMilestoneId}.`,
             data: result.deletedAgeMilestoneInfo
         });
-    }catch (err){
+    } catch (err) {
         console.error(`[ERROR] Failed operation for AgeMilestone ID ${ageMilestoneId} (TransferTo: ${transferToAgeMilestoneId}, Force: ${force}):`, err);
         const errorMessage = err.message || '';
         if (errorMessage.includes(`No ageMilestone was found with ID ${ageMilestoneId}`)) {
@@ -620,5 +678,50 @@ exports.ageMilestoneDelete = async (req, res) => {
             success: false,
             msg: 'An unexpected error occurred on the server while processing the age milestone deletion.'
         });
+    }
+}
+
+// Fetch only Location data of all sheep (with pagination/filters reused)
+exports.getLocations = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const pageSize = parseInt(req.query.pageSize) || 10;
+        const sortBy = req.query.sortBy || 'id';
+        const sortOrder = (req.query.sortOrder || 'ASC').toUpperCase();
+
+        const result = await getLocationsOnly({page, pageSize, sortBy, sortOrder});
+        res.status(200).json({success: true, msg: 'successfully!', ...result});
+    } catch (err) {
+        res.status(500).json({msg: 'Server error!', err});
+    }
+}
+
+// Fetch latest indexes only
+exports.getLatestIndexes = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const pageSize = parseInt(req.query.pageSize) || 10;
+        const sortBy = req.query.sortBy || 'id';
+        const sortOrder = (req.query.sortOrder || 'ASC').toUpperCase();
+
+        const result = await getLatestIndexesOnly({page, pageSize, sortBy, sortOrder});
+        res.status(200).json({success: true, msg: 'successfully!', ...result});
+    } catch (err) {
+        res.status(500).json({msg: 'Server error!', err});
+    }
+}
+
+// Fetch age milestone list (distinct records)
+exports.getAgeMilestones = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const pageSize = parseInt(req.query.pageSize) || 10;
+        const sortBy = req.query.sortBy || 'id';
+        const sortOrder = (req.query.sortOrder || 'ASC').toUpperCase();
+
+        const result = await getAgeMilestonesOnly({page, pageSize, sortBy, sortOrder});
+        res.status(200).json({success: true, msg: 'successfully!', ...result});
+    } catch (err) {
+        res.status(500).json({msg: 'Server error!', err});
     }
 }

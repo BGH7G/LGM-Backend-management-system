@@ -1,33 +1,39 @@
 const createSampleWithAssociations = require('../services/sampleTransaction')
 const updateSampleWithAssociations = require('../services/sampleUpdateTransaction')
 const deleteSampleWithAssociations = require('../services/sampleDeleteTransaction')
-const {sequelize, Sample, Buyer, Tag} = require("../model/sampleModel");
+const {sampleGetAllTransaction} = require('../services/sampleGetAllTransaction')
 
 exports.get = async (req, res) => {
-    const pageNumber = parseInt(req.query.page) || 1
-    const pageSize = parseInt(req.query.pageSize) || 10
-    const offsets = (pageNumber - 1) * pageSize
+    let page = parseInt(req.query.page) || 1;
+    let pageSize = parseInt(req.query.pageSize) || 50;
+    let sortBy = req.query.sortBy || 'id';
+    let sortOrder = (req.query.sortOrder || 'ASC').toUpperCase();
     try {
-        const {count, rows} = await Sample.findAndCountAll({
-            limit: pageSize,
-            offset: offsets,
-            include: [
-                {
-                    model: Tag,
-                    attributes: ['id', 'name']
-                },
-                Buyer
-            ],
-            order: [['createdAt', 'DESC']]
-        })
-        const totalPages = Math.ceil(count / pageSize);
+        if (page < 1 || pageSize < 1) {
+            return res.status(400).json({
+                success: false,
+                msg: '无效的分页参数'
+            });
+        }
+
+        if (!['ASC', 'DESC'].includes(sortOrder)) {
+            return res.status(400).json({
+                success: false,
+                msg: '排序方式必须是ASC或DESC'
+            });
+        }
+
+        const result = await sampleGetAllTransaction({
+            page,
+            pageSize,
+            sortBy,
+            sortOrder
+        });
         res.status(200).json({
-            data: rows,
-            total: count,
-            pageNumber: pageNumber,
-            pageSize: pageSize,
-            totalPages: totalPages
-        })
+            success: true,
+            msg: 'successfully!',
+            ...result
+        });
     } catch (error) {
         res.status(400).json({error: error});
     }
@@ -63,7 +69,6 @@ exports.delete = async (req, res) => {
 exports.edit = async (req, res) => {
     try {
         const {dataValues, _previousDataValues} = await updateSampleWithAssociations(req.body, req.params.id)
-        console.log(dataValues)
         res.status(200).json({
             msg: "Sample updated!",
             dataValues: dataValues,

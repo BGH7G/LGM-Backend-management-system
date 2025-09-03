@@ -1,5 +1,4 @@
 const {DataTypes} = require('sequelize');
-
 const sequelize = require('./index');
 const Image = sequelize.define('Image', {
     filename:{
@@ -25,6 +24,25 @@ const Image = sequelize.define('Image', {
     }
 });
 
+const Album = sequelize.define('Album', {
+    name: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true,
+        validate: {
+            len: [2, 30],
+        }
+    },
+    description: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    cover: {
+        type: DataTypes.TEXT,
+        allowNull: false
+    }
+});
+
 const Category = sequelize.define('Category', {
     name: {
         type: DataTypes.STRING,
@@ -38,6 +56,8 @@ const Category = sequelize.define('Category', {
 
 Category.hasMany(Image);
 Image.belongsTo(Category);
+Album.hasMany(Image);
+Image.belongsTo(Album);
 
 (async () => {
     await sequelize.sync({})
@@ -46,5 +66,6 @@ Image.belongsTo(Category);
 module.exports = {
     sequelize,
     Image,
-    Category
+    Category,
+    Album
 }

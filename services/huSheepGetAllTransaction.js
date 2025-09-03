@@ -1,6 +1,16 @@
 const {sequelize, HuSheep, HuSheepIndex, AgeMilestone, Location} = require("../model/experimentalData/huSheepModel");
 
-async function huSheepGetAllTransaction(options={}){
+/**
+ * 分页获取数据
+ * @param {Object} options - 分页选项
+ * @param {number} options.page - 分页页数
+ * @param {number} options.pageSize - 每页展示的数据量
+ * @param {String} options.sortBy - 按~数据展示
+ * @param {String} options.sortOrder - 排序
+ * @param {Object} options.filters - 其他筛选条件
+ * @returns {Promise<Object>} - 获取数据
+ */
+async function huSheepGetAllTransaction(options = {}) {
     const page = options.page || 1;
     const pageSize = options.pageSize || 10;
     const sortBy = options.sortBy || 'id';
@@ -9,7 +19,7 @@ async function huSheepGetAllTransaction(options={}){
 
     const offset = (page - 1) * pageSize;
     return await sequelize.transaction(async (t) => {
-        const whereClause = { ...filters };
+        const whereClause = {...filters};
         const totalCount = await HuSheep.count({
             where: whereClause,
             transaction: t
@@ -26,6 +36,7 @@ async function huSheepGetAllTransaction(options={}){
                     ]
                 }
             ],
+            distinct: true,
             order: [[sortBy, sortOrder]],
             limit: pageSize,
             offset: offset,
@@ -34,7 +45,7 @@ async function huSheepGetAllTransaction(options={}){
         const sheepWithIndexData = await Promise.all(sheepList.map(async (sheep) => {
             // 获取该羊的最新指标数据
             const latestIndex = await HuSheepIndex.findOne({
-                where: { HuSheepId: sheep.id },
+                where: {HuSheepId: sheep.id},
                 include: [
                     {
                         model: AgeMilestone,

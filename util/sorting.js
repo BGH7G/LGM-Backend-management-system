@@ -1,6 +1,6 @@
 const sampleCtl = require('../model/sampleModel')
 const {Buyer} = require("../model/sampleModel");
-
+ // 这是示例代码
 async function f(r, res) {
     const pageNumber = parseInt(r.query.page) || 1
     const pageSize = parseInt(r.query.pageSize) || 10

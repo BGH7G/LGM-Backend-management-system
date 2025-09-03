@@ -1,8 +1,14 @@
 const {sequelize, Sample, Buyer, Tag} = require('../model/sampleModel')
-
+/**
+ * 修改样品信息
+ * @param {Object} data - 数据
+ * @param {number} sampleId - 样品Id
+ * @returns {Promise<Object>} - 修改结果
+ */
 module.exports = async function updateSampleWithAssociations(data, sampleId) {
     return await sequelize.transaction(async (t) => {
         const sample = await Sample.findByPk(sampleId, {transaction: t})
+        console.log(data)
         // 更新逻辑 先主后从
         if (!sample) {
             throw new Error('No sample was found')

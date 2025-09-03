@@ -1,5 +1,10 @@
 const {sequelize, HuSheep, HuSheepIndex, AgeMilestone, Location} = require("../model/experimentalData/huSheepModel");
 
+/**
+ * 上传羊只信息
+ * @param {Object} data - 羊只数据
+ * @returns {Promise<Object>} - 上传结果
+ */
 async function huSheepPostTransaction(data) {
     return await sequelize.transaction(async (t) => {
         const {location, sheepData} = data;
@@ -35,6 +40,11 @@ async function huSheepPostTransaction(data) {
     });
 }
 
+/**
+ * 上传年龄信息
+ * @param {Object} ageMilestoneData - 年龄数据
+ * @returns {Promise<Object>}} - 上传结果
+ */
 async function ageMilestonePostTransaction(ageMilestoneData) {
     return await sequelize.transaction(async (t) => {
         return await AgeMilestone.create({
@@ -45,6 +55,11 @@ async function ageMilestonePostTransaction(ageMilestoneData) {
     })
 }
 
+/**
+ * 上传表型信息
+ * @param {Object} huSheepIndexData - 表型数据
+ * @returns {Promise<Object>} - 上传结果
+ */
 async function huSheepIndexPostTransaction(huSheepIndexData) {
     return await sequelize.transaction(async (t) => {
         const {milestone, indexData} = huSheepIndexData;

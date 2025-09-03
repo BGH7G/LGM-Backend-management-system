@@ -39,3 +39,17 @@ module.exports.createToken = async userInfo => {
         }
     );
 }
+
+/**
+ * 可选鉴权：有 token 就解析并把 user 挂到 req；无 token 直接放行
+ */
+exports.optionalToken = () => (req, res, next) => {
+    const auth = req.headers.authorization;
+    if (!auth) return next();               // 无 token => 匿名
+    const token = auth.split(' ')[1];
+    jwt.verify(token, secret, (err, decoded) => {
+        if (!err) req.user = decoded;         // 解析成功则携带 user 信息
+        // 解析失败也直接放行，保持只读接口可用
+        return next();
+    });
+};

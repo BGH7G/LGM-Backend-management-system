@@ -1,5 +1,9 @@
 const {sequelize, Sample, Buyer, Tag} = require('../model/sampleModel')
-
+/**
+ * 上传样品
+ * @param {Object} data - 样品信息
+ * @returns {Promise<Object>} - 上传结果
+ */
 module.exports = async function createSampleWithAssociations(data) {
     return await sequelize.transaction(async (t) => {
         const [buyer] = await Buyer.findOrCreate({

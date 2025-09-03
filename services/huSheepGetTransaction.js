@@ -1,5 +1,10 @@
 const {sequelize, HuSheep, HuSheepIndex, AgeMilestone, Location} = require("../model/experimentalData/huSheepModel");
 
+/**
+ * 获取羊只数据
+ * @param {number} sheepId - 羊只ID
+ * @returns {Promise<Object>} - 获取结果
+ */
 async function huSheepGetTransaction(sheepId) {
     return await sequelize.transaction(async (t) => {
         const sheep = await HuSheep.findByPk(sheepId, {
@@ -24,9 +29,6 @@ async function huSheepGetTransaction(sheepId) {
                     attributes: ['id', 'age_days', 'milestone_name', 'description']
                 }
             ],
-            order: [
-                [{model: AgeMilestone, as: 'milestone'}, 'age_days', 'ASC']
-            ],
             transaction: t
         });
         return {
@@ -43,7 +45,7 @@ async function huSheepGetTransaction(sheepId) {
             location: sheep.Location,
             indexData: indexData.map(index => ({
                 id: index.id,
-                milestone: index.milestone,
+                milestone: index.AgeMilestone,
                 notes: index.notes,
                 group: index.group,
                 rumen_ph: index.rumen_ph,

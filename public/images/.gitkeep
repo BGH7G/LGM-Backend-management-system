@@ -1,0 +1,1 @@
+keep public/images directory in repo; uploads are ignored via .gitignore

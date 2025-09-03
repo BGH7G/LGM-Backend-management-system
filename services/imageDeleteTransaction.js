@@ -1,10 +1,12 @@
 const {sequelize, Image, Category} = require('../model/imageModel');
-
-module.exports = async function imageDeleteTransaction(req) {
+/**
+ *  删除图片
+ * @param imageId - 图片ID
+ * @param category - 分类
+ * @returns {Promise<Object>} - 删除的图片数量
+ */
+module.exports = async function imageDeleteTransaction(imageId,category) {
     return sequelize.transaction(async (t) => {
-        const id = req.params.id;
-        const category = req.body.name;
-
         if (category) {
             await Category.destroy({
                 where: { name: category },
@@ -12,12 +14,11 @@ module.exports = async function imageDeleteTransaction(req) {
             });
         }
 
-        if (!id) {
+        if (!imageId) {
             throw new Error('No ID obtained!');
         }
-
         const deletedCount = await Image.destroy({
-            where: { id },
+            where: { id : imageId },
             transaction: t
         });
 
