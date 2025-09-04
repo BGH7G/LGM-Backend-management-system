@@ -52,10 +52,6 @@ Sample.belongsTo(Buyer);
 Sample.belongsToMany(Tag, {through: 'SampleTag'});
 Tag.belongsToMany(Sample, {through: 'SampleTag'});
 
-(async () => {
-    await sequelize.sync({})
-})()
-
 module.exports = {
     sequelize,
     Sample,

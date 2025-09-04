@@ -29,11 +29,6 @@ const ActivationCode = sequelize.define('ActivationCode', {
   paranoid: true,
 });
 
-// Ensure the table exists even if other modules sync earlier
-(async () => {
-  await sequelize.sync({});
-})();
-
 module.exports = {
   ActivationCode,
   sequelize,

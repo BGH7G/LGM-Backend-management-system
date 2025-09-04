@@ -29,7 +29,7 @@ const Claim = sequelize.define('Claim', {
     ],
 });
 
-User.hasMany(Claim);
+User.hasMany(Claim, { foreignKey: 'userId' });
 Claim.belongsTo(User, { foreignKey: 'userId' });
 
 module.exports = { Claim, sequelize };

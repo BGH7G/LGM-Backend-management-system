@@ -59,10 +59,6 @@ Image.belongsTo(Category);
 Album.hasMany(Image);
 Image.belongsTo(Album);
 
-(async () => {
-    await sequelize.sync({})
-})()
-
 module.exports = {
     sequelize,
     Image,

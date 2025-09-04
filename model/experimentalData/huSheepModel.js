@@ -142,10 +142,6 @@ HuSheepIndex.belongsTo(AgeMilestone);
 HuSheep.hasMany(HuSheepIndex);
 AgeMilestone.hasMany(HuSheepIndex);
 
-(async () => {
-    await sequelize.sync({})
-})()
-
 module.exports = {
     sequelize,
     HuSheep,

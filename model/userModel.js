@@ -65,10 +65,6 @@ User.prototype.verifyPassword = async function (candidatePassword) {
     return await bcrypt.compare(candidatePassword, this.password);
 };
 
-(async () => {
-    await sequelize.sync({})
-})();
-
 module.exports = {
     User,
     sequelize

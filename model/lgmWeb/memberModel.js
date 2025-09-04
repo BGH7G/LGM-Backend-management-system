@@ -91,10 +91,6 @@ const MemberExpertise = sequelize.define('MemberExpertise', {
 Member.belongsToMany(Expertise, { through: MemberExpertise });
 Expertise.belongsToMany(Member, { through: MemberExpertise });
 
-(async () => {
-    await sequelize.sync({})
-})()
-
 module.exports = {
     Member,
     Role,

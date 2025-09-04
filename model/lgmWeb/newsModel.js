@@ -138,10 +138,6 @@ const NewsLike = sequelize.define('NewsLike', {
 News.hasMany(NewsLike);
 NewsLike.belongsTo(News);
 
-(async () => {
-    await sequelize.sync({});
-})();
-
 module.exports = {
     News,
     newsCategory,

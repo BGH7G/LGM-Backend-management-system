@@ -140,10 +140,6 @@ PublicationType.hasMany(Publication);
 Publication.belongsTo(ResearchCategory);
 ResearchCategory.hasMany(Publication);
 
-(async () => {
-    await sequelize.sync({});
-})();
-
 module.exports = {
     Publication,
     Author,

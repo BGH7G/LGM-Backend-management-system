@@ -6,6 +6,14 @@ const path = require('path');
 const app = express();
 const port = process.env.PORT || 3000
 const { User, sequelize } = require('./model/userModel');
+require('./model/claim/claimModel');
+require('./model/imageModel');
+require('./model/activationCodeModel');
+require('./model/lgmWeb/newsModel');
+require('./model/lgmWeb/publicationModel');
+require('./model/lgmWeb/memberModel');
+require('./model/experimentalData/huSheepModel');
+require('./model/lgmWeb/EditorImagesModel');
 
 app.use(morgan('dev'));
 
@@ -35,9 +43,6 @@ async function ensureDefaultAdmin() {
             return;
         }
 
-        // Ensure tables are ready (safe to call multiple times)
-        await sequelize.sync();
-
         const existingAdmin = await User.findOne({ where: { role: 'admin' } });
         if (existingAdmin) return; // already have an admin
 
@@ -54,9 +59,17 @@ async function ensureDefaultAdmin() {
     }
 }
 
-// kick off admin seeding (non-blocking)
-ensureDefaultAdmin();
+async function start() {
+    try {
+        await sequelize.sync();
+        await ensureDefaultAdmin();
+        app.listen(port, () => {
+            console.log(`Example app listening on port ${port}`);
+        });
+    } catch (e) {
+        console.error('Failed to start server:', e);
+        process.exit(1);
+    }
+}
 
-app.listen(port, () => {
-    console.log(`Example app listening on port ${port}`)
-})
+start();
