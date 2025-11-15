@@ -6,7 +6,8 @@ const {
     PublicationType,
     ResearchCategory,
     Keyword,
-    sequelize
+    sequelize,
+    PublicationAuthor
 } = require('../../model/lgmWeb/publicationModel');
 
 // 创建论文
@@ -23,7 +24,11 @@ const createPublication = async (data) => {
             ...rest
         } = data;
 
-        const publication = await Publication.create(rest, {transaction: t});
+        const payloadCreate = { ...rest };
+        if (payloadCreate.doi === '') payloadCreate.doi = null;
+        if (payloadCreate.pdfUrl === '') payloadCreate.pdfUrl = null;
+        if (payloadCreate.codeUrl === '') payloadCreate.codeUrl = null;
+        const publication = await Publication.create(payloadCreate, {transaction: t});
 
         if (venueId) {
             const venue = await Venue.findByPk(venueId, {transaction: t});
@@ -37,9 +42,20 @@ const createPublication = async (data) => {
             const category = await ResearchCategory.findByPk(categoryId, {transaction: t});
             if (category) await publication.setResearchCategory(category, {transaction: t});
         }
-        if (authorIds && authorIds.length) {
-            const authors = await Author.findAll({where: {id: authorIds}, transaction: t});
-            await publication.setAuthors(authors, {transaction: t});
+        if (authorIds !== undefined) {
+            await publication.setAuthors([], { transaction: t });
+            const flatIds = authorIds
+                .map(a => (a && typeof a === 'object') ? (a.id ?? a.authorId) : a)
+                .filter(id => id != null);
+            const existing = await Author.findAll({ where: { id: flatIds }, transaction: t });
+            const existingSet = new Set(existing.map(a => a.id));
+            for (let i = 0; i < authorIds.length; i++) {
+                const item = authorIds[i];
+                const id = (item && typeof item === 'object') ? (item.id ?? item.authorId) : item;
+                if (id == null || !existingSet.has(id)) continue;
+                const position = (item && typeof item === 'object' && item.position != null) ? item.position : (i + 1);
+                await publication.addAuthor(id, { through: { position }, transaction: t });
+            }
         }
         if (keywordIds && keywordIds.length) {
             const keywords = await Keyword.findAll({where: {id: keywordIds}, transaction: t});
@@ -60,12 +76,15 @@ const getAllPublications = async ({page = 1, pageSize = 10, sortBy = 'year', sor
         distinct: true,
         limit: pageSize,
         offset,
-        order: [[sortBy, sortOrder]],
+        order: [
+            [sortBy, sortOrder],
+            [Author, PublicationAuthor, 'position', 'ASC']
+        ],
         include: [
             {model: Venue},
             {model: PublicationType},
             {model: ResearchCategory},
-            {model: Author, through: {attributes: []}},
+            {model: Author, through: {attributes: ['position']}},
             {model: Keyword, through: {attributes: []}}
         ]
     });
@@ -84,9 +103,10 @@ const getPublicationById = async (id) => {
             { model: Venue },
             { model: PublicationType },
             { model: ResearchCategory },
-            { model: Author, through: { attributes: [] } },
+            { model: Author, through: { attributes: ['position'] } },
             { model: Keyword, through: { attributes: [] } }
-        ]
+        ],
+        order: [[Author, PublicationAuthor, 'position', 'ASC']]
     });
 };
 
@@ -106,7 +126,11 @@ const updatePublication = async (id, data) => {
             ...rest
         } = data;
 
-        await publication.update(rest, {transaction: t});
+        const payloadUpdate = { ...rest };
+        if (payloadUpdate.doi === '') payloadUpdate.doi = null;
+        if (payloadUpdate.pdfUrl === '') payloadUpdate.pdfUrl = null;
+        if (payloadUpdate.codeUrl === '') payloadUpdate.codeUrl = null;
+        await publication.update(payloadUpdate, {transaction: t});
 
         if (venueId !== undefined) {
             const venue = await Venue.findByPk(venueId, {transaction: t});
@@ -120,9 +144,20 @@ const updatePublication = async (id, data) => {
             const category = await ResearchCategory.findByPk(categoryId, {transaction: t});
             await publication.setResearchCategory(category, {transaction: t});
         }
-        if (authorIds) {
-            const authors = await Author.findAll({where: {id: authorIds}, transaction: t});
-            await publication.setAuthors(authors, {transaction: t});
+        if (authorIds !== undefined) {
+            await publication.setAuthors([], { transaction: t });
+            const flatIds = authorIds
+                .map(a => (a && typeof a === 'object') ? (a.id ?? a.authorId) : a)
+                .filter(id => id != null);
+            const existing = await Author.findAll({ where: { id: flatIds }, transaction: t });
+            const existingSet = new Set(existing.map(a => a.id));
+            for (let i = 0; i < authorIds.length; i++) {
+                const item = authorIds[i];
+                const id = (item && typeof item === 'object') ? (item.id ?? item.authorId) : item;
+                if (id == null || !existingSet.has(id)) continue;
+                const position = (item && typeof item === 'object' && item.position != null) ? item.position : (i + 1);
+                await publication.addAuthor(id, { through: { position }, transaction: t });
+            }
         }
         if (keywordIds) {
             const keywords = await Keyword.findAll({where: {id: keywordIds}, transaction: t});

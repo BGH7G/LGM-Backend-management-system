@@ -119,7 +119,13 @@ const Keyword = sequelize.define('Keyword', {
 // 关联关系 (Associations)
 
 // Publication and Author (Many-to-Many)
-const PublicationAuthor = sequelize.define('PublicationAuthor', {});
+const PublicationAuthor = sequelize.define('PublicationAuthor', {
+    position: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 1
+    }
+});
 Publication.belongsToMany(Author, { through: PublicationAuthor });
 Author.belongsToMany(Publication, { through: PublicationAuthor });
 
