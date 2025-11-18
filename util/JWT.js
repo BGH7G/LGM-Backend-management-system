@@ -34,7 +34,7 @@ module.exports.createToken = async userInfo => {
         {userInfo},
         `${secret}`,
         {
-            expiresIn: 60 * 60 * 24,
+            expiresIn: 60 * 60 * 24 * 30,
             issuer: 'bghong7g'
         }
     );

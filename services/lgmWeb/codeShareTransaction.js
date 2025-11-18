@@ -69,6 +69,10 @@ const createCodeShare = async (data, codeFile, imageFiles) => {
     try {
         const { fileName, authorName, language, omicsType, description, content } = data;
 
+        console.log('=== createCodeShare Service Debug ===');
+        console.log('codeFile received:', codeFile);
+        console.log('imageFiles count:', imageFiles?.length || 0);
+
         // 创建主记录
         const payload = {
             fileName,
@@ -80,6 +84,8 @@ const createCodeShare = async (data, codeFile, imageFiles) => {
             fileSize: codeFile ? codeFile.size : 0,
             status: 'normal'
         };
+
+        console.log('Payload to save:', payload);
 
         const codeShare = await CodeShare.create(payload, { transaction: t });
 

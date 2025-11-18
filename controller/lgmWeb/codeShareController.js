@@ -1,5 +1,6 @@
 const codeShareService = require('../../services/lgmWeb/codeShareTransaction.js');
 const path = require('path');
+const fs = require('fs');
 
 // GET /code-share - 查询代码分享列表
 exports.get = async (req, res) => {
@@ -40,12 +41,20 @@ exports.getById = async (req, res) => {
 // POST /code-share - 创建代码分享
 exports.create = async (req, res) => {
     try {
+        console.log('=== Code Share Create Debug ===');
+        console.log('req.files:', req.files);
+        console.log('req.body:', req.body);
+        
         const codeFile = req.files?.codeFile?.[0];
         const imageFiles = req.files?.images || [];
+        
+        console.log('codeFile:', codeFile);
+        console.log('imageFiles count:', imageFiles.length);
         
         const codeShare = await codeShareService.createCodeShare(req.body, codeFile, imageFiles);
         res.status(201).json({ success: true, msg: 'Code share created successfully!', data: codeShare });
     } catch (error) {
+        console.error('Create code share error:', error);
         res.status(500).json({ success: false, msg: 'Failed to create code share.', error: error.message });
     }
 };
@@ -114,15 +123,73 @@ exports.downloadFile = async (req, res) => {
         const codeShare = await codeShareService.getCodeShareById(req.params.id);
         if (!codeShare) return res.status(404).json({ success: false, msg: 'Code share not found' });
 
+        // 检查数据库中的 filePath 是否为空
+        if (!codeShare.filePath || codeShare.filePath.trim() === '') {
+            console.error('FilePath is empty in database for code share ID:', req.params.id);
+            return res.status(404).json({ 
+                success: false, 
+                msg: 'File path is missing in database. The file was not uploaded correctly.'
+            });
+        }
+
+        // 从URL或路径中提取实际的文件路径
+        let filePath;
+        if (codeShare.filePath.startsWith('http://') || codeShare.filePath.startsWith('https://')) {
+            // 如果是URL，提取文件名并构建到 public/images/Code/ 目录
+            const urlPath = new URL(codeShare.filePath).pathname;
+            const fileName = path.basename(urlPath);
+            
+            if (!fileName || fileName === '') {
+                console.error('Failed to extract filename from URL:', codeShare.filePath);
+                return res.status(404).json({ 
+                    success: false, 
+                    msg: 'Invalid file path in database.',
+                    dbPath: codeShare.filePath
+                });
+            }
+            
+            filePath = path.join(__dirname, '../../public/images/Code', fileName);
+        } else if (codeShare.filePath.startsWith('/') || codeShare.filePath.match(/^[a-zA-Z]:/)) {
+            // 绝对路径
+            filePath = codeShare.filePath;
+        } else {
+            // 相对路径
+            filePath = path.join(__dirname, '../../', codeShare.filePath);
+        }
+        
+        console.log('Resolved file path:', filePath);
+        
+        // 检查文件是否存在且不是目录
+        if (!fs.existsSync(filePath)) {
+            console.error(`File not found: ${filePath}`);
+            console.error(`Original filePath from DB: ${codeShare.filePath}`);
+            return res.status(404).json({ 
+                success: false, 
+                msg: 'File not found on server.',
+                dbPath: codeShare.filePath,
+                resolvedPath: filePath
+            });
+        }
+        
+        // 检查是否是目录
+        const stats = fs.statSync(filePath);
+        if (stats.isDirectory()) {
+            console.error(`Path is a directory, not a file: ${filePath}`);
+            console.error(`Original filePath from DB: ${codeShare.filePath}`);
+            return res.status(500).json({ 
+                success: false, 
+                msg: 'Invalid file path - points to a directory.',
+                dbPath: codeShare.filePath,
+                resolvedPath: filePath
+            });
+        }
+
         // 记录下载
         const userId = req.user?.id || null;
         const userName = req.user?.name || 'Anonymous';
         await codeShareService.recordDownload(req.params.id, userId, userName);
-
-        // 构建文件路径
-        const filePath = path.join(__dirname, '../../public/images/Code', path.basename(codeShare.filePath));
         
-        // 设置响应头，触发浏览器下载
+        // 设置响应头,触发浏览器下载
         res.download(filePath, codeShare.fileName, (err) => {
             if (err) {
                 console.error('Download error:', err);
@@ -132,7 +199,10 @@ exports.downloadFile = async (req, res) => {
             }
         });
     } catch (error) {
-        res.status(500).json({ success: false, msg: 'Failed to download file.', error: error.message });
+        console.error('Download controller error:', error);
+        if (!res.headersSent) {
+            res.status(500).json({ success: false, msg: 'Failed to download file.', error: error.message });
+        }
     }
 };
 
