@@ -18,7 +18,7 @@ exports.create = async (req, res) => {
 exports.getAll = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const pageSize = parseInt(req.query.pageSize) || 10;
+        const pageSize = parseInt(req.query.pageSize) || 30;
         const sortBy = req.query.sortBy || 'id';
         const sortOrder = (req.query.sortOrder || 'ASC').toUpperCase();
 

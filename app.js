@@ -14,11 +14,13 @@ require('./model/lgmWeb/publicationModel');
 require('./model/lgmWeb/memberModel');
 require('./model/experimentalData/huSheepModel');
 require('./model/lgmWeb/EditorImagesModel');
+require('./model/lgmWeb/codeShareModel');
 
 app.use(morgan('dev'));
 
 app.use('/public',express.static('public'));
 app.use('/images', express.static(path.join(__dirname, 'public/images')));
+app.use('/Code', express.static(path.join(__dirname, 'public/images/Code')));
 
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
