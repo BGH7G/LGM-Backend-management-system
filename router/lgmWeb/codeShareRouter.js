@@ -20,18 +20,18 @@ router
     .get('/:id/download', optionalToken(), codeShareController.downloadFile) // 下载文件
     .get('/:id/download-logs', verifyToken(true), authorize('admin'), codeShareController.getDownloadLogs)
     .get('/:id', optionalToken(), codeShareController.getById) // 必须放在最后！！！！！
-    
+
     // 创建和更新
-    .post('/', verifyToken(true), authorize('admin'), codeUpload.fields(uploadFields), codeShareController.create)
+    .post('/', verifyToken(true), codeUpload.fields(uploadFields), codeShareController.create)
     .put('/:id', verifyToken(true), authorize('admin'), codeUpload.fields(uploadFields), codeShareController.update)
-    
+
     // 删除
     .delete('/:id', verifyToken(true), authorize('admin'), codeShareController.delete)
     .delete('/images/:imageId', verifyToken(true), authorize('admin'), codeShareController.deleteImage)
-    
+
     // 封面图设置
     .put('/:id/cover/:imageId', verifyToken(true), authorize('admin'), codeShareController.setCover)
-    
+
     // 下载记录
     .post('/:id/download', optionalToken(), codeShareController.download);
 
