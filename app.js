@@ -15,10 +15,11 @@ require('./model/lgmWeb/memberModel');
 require('./model/experimentalData/huSheepModel');
 require('./model/lgmWeb/EditorImagesModel');
 require('./model/lgmWeb/codeShareModel');
+require('./model/datasheetModel');
 
 app.use(morgan('dev'));
 
-app.use('/public',express.static('public'));
+app.use('/public', express.static('public'));
 app.use('/images', express.static(path.join(__dirname, 'public/images')));
 app.use('/Code', express.static(path.join(__dirname, 'public/images/Code')));
 
@@ -29,8 +30,8 @@ app.use('/api/v1', router);
 
 app.use((err, _req, res, _next) => {
     const status = err.statusCode || 500;
-    const code   = err.code || 'SERVER_ERROR';
-    const msg    = err.message || 'Internal Server Error';
+    const code = err.code || 'SERVER_ERROR';
+    const msg = err.message || 'Internal Server Error';
     res.status(status).json({ code, msg });
 });
 

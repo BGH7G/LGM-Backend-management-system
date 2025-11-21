@@ -14,6 +14,7 @@ router.use('/member', require('./lgmWeb/memberRouter'))
 router.use('/publication', require('./lgmWeb/publicationRouter'))
 router.use('/upload', require('./lgmWeb/uploadImageRouter'))
 router.use('/code', require('./lgmWeb/codeShareRouter'))
+router.use('/datasheet', require('./datasheetRouter'))
 
 
 module.exports = router;
